@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>PandaDoc Invoice & Quote Generator</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh; padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,.95); border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 30px; text-align: center; }
+    .header h1 { font-size: 2.4rem; margin-bottom: 8px; }
+    .mode-selector { display:flex; justify-content:center; gap:16px; padding:20px; background:#f8f9fa; flex-wrap:wrap; }
+    .mode-btn {
+      padding: 12px 28px; font-size: 1.05rem; border:none; border-radius: 999px; cursor:pointer;
+      font-weight:700; transition: transform .15s ease, box-shadow .15s ease; letter-spacing:.2px;
+    }
+    .mode-btn.quote { background:#4CAF50; color:#fff; }
+    .mode-btn.invoice { background:#2196F3; color:#fff; }
+    .mode-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.18); }
+    .mode-btn.active { transform: scale(1.04); box-shadow: 0 10px 24px rgba(0,0,0,.22); }
+
+    .content { display:flex; gap:30px; padding:30px; }
+    .products-section { flex:1.5; }
+    .cart-section { flex:1; background:#f8f9fa; border-radius: 16px; padding: 22px; height: fit-content; position: sticky; top: 20px; }
+    .section-title { font-size:1.4rem; margin-bottom:16px; color:#333; border-bottom:2px solid #667eea; padding-bottom:8px; }
+    .product-grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(300px,1fr)); gap:18px; }
+    .product-card { background:#fff; border-radius: 12px; padding: 18px; box-shadow: 0 2px 10px rgba(0,0,0,.08); transition: transform .15s ease, box-shadow .15s ease; }
+    .product-card:hover { transform: translateY(-4px); box-shadow: 0 8px 22px rgba(0,0,0,.12); }
+    .product-image { position:relative; width:100%; height: 220px; background: #eef2f7; border-radius: 10px; margin-bottom: 12px; display:flex; align-items:center; justify-content:center; color:#8a93a5; overflow:hidden; }
+    .product-image img { width:100%; height:100%; object-fit: contain; }
+    .product-name { font-size: 1.12rem; font-weight:700; margin-bottom:6px; color:#222; }
+    .product-sku { color:#667; font-size:.9rem; margin-bottom:6px; }
+    .product-description { color:#666; font-size:.95rem; margin-bottom:10px; line-height: 1.35; }
+    .pricing-table { background:#f8f9fa; border-radius: 8px; padding:10px; margin-bottom: 12px; }
+    .pricing-tier { display:flex; justify-content:space-between; font-size:.9rem; padding:4px 0; }
+    .pricing-tier.active { background:#667eea; color:#fff; padding:4px 8px; border-radius: 4px; margin: 0 -8px; }
+    .quantity-selector { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .qty-btn { width:36px; height:36px; border:2px solid #667eea; background:#fff; color:#667eea; border-radius:50%; cursor:pointer; font-size:1.1rem; }
+    .qty-btn:hover { background:#667eea; color:#fff; }
+    .qty-input { width:80px; padding:8px; text-align:center; border:2px solid #ddd; border-radius:8px; font-size:1rem; }
+    .price-display { font-size:1.15rem; font-weight:700; color:#667eea; margin-bottom:6px; }
+    .savings-badge { background:#4CAF50; color:#fff; padding:4px 9px; border-radius: 999px; font-size:.82rem; display:inline-block; margin-bottom: 8px; }
+
+    .add-to-cart-btn {
+      width:100%; padding: 12px 16px; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:#fff; transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .add-to-cart-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(102,126,234,.35); }
+
+    .customer-info { background:#fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .form-group { margin-bottom:12px; }
+    .form-group label { display:block; margin-bottom:5px; font-weight:700; color:#333; }
+    .form-group input { width:100%; padding:10px; border:2px solid #ddd; border-radius: 8px; font-size:1rem; }
+    .form-group input:focus { outline:none; border-color:#667eea; }
+
+    .generate-btn {
+      width:100%; padding: 14px; border:none; border-radius: 12px; font-size:1.1rem; font-weight:800; cursor:pointer; margin-top: 12px;
+      background: linear-gradient(135deg, #4CAF50 0%, #2ead5f 100%); color:#fff; box-shadow: 0 12px 24px rgba(46,173,95,.28);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .generate-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 30px rgba(46,173,95,.36); }
+
+    .cart-item { background:#fff; border-radius: 10px; padding: 12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+    .cart-item-name { font-weight:700; margin-bottom: 3px; }
+    .cart-item-details { font-size:.9rem; color:#666; }
+    .remove-btn { background:#ff4444; color:#fff; border:none; padding:6px 10px; border-radius: 6px; cursor:pointer; font-size:.9rem; }
+
+    .cart-totals { border-top: 2px solid #ddd; padding-top: 12px; margin-top: 12px; }
+    .total-row { display:flex; justify-content:space-between; margin-bottom:8px; font-size:1.02rem; }
+    .total-row.grand-total { font-size:1.3rem; font-weight:800; color:#667eea; border-top: 2px solid #667eea; padding-top: 8px; margin-top: 8px; }
+
+    .shipping-section { display:none; }
+    .shipping-section.active { display:block; }
+
+    .success-message, .error-message {
+      padding: 12px; border-radius: 8px; margin-bottom: 12px; text-align:center; display:none; font-weight:700;
+    }
+    .success-message { background:#4CAF50; color:#fff; }
+    .error-message { background:#ff4444; color:#fff; }
+
+    @media (max-width: 968px) {
+      .content { flex-direction: column; }
+      .cart-section { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📄 PandaDoc Document Generator</h1>
+      <p>Create professional quotes and invoices with catalog images and volume pricing</p>
+    </div>
+
+    <div class="mode-selector">
+      <button class="mode-btn quote" onclick="setMode('quote')">📋 Create Quote</button>
+      <button class="mode-btn invoice" onclick="setMode('invoice')">📑 Create Invoice</button>
+    </div>
+
+    <div class="content">
+      <div class="products-section">
+        <h2 class="section-title">Products Catalog</h2>
+        <div id="productGrid" class="product-grid"></div>
+      </div>
+
+      <div class="cart-section">
+        <h2 class="section-title"><span id="documentType">Document</span> Builder</h2>
+        <div id="successMessage" class="success-message"></div>
+        <div id="errorMessage" class="error-message"></div>
+
+        <div class="customer-info">
+          <h3 style="margin-bottom:10px;">Customer Information</h3>
+          <div class="form-group"><label>Customer Name *</label><input id="customerName" placeholder="John Doe" /></div>
+          <div class="form-group"><label>Company</label><input id="customerCompany" placeholder="ACME Co." /></div>
+          <div class="form-group"><label>Email *</label><input id="customerEmail" type="email" placeholder="customer@example.com" /></div>
+          <div class="form-group"><label>Phone</label><input id="customerPhone" placeholder="+1 (555) 123-4567" /></div>
+        </div>
+
+        <div id="shippingSection" class="shipping-section">
+          <div class="customer-info">
+            <h3 style="margin-bottom:10px;">Shipping Address</h3>
+            <div class="form-group"><label>Street Address *</label><input id="shippingStreet" /></div>
+            <div class="form-group"><label>City *</label><input id="shippingCity" /></div>
+            <div class="form-group"><label>State *</label><input id="shippingState" /></div>
+            <div class="form-group"><label>ZIP Code *</label><input id="shippingZip" /></div>
+          </div>
+        </div>
+
+        <div id="cartItems"></div>
+        <button id="generateBtn" class="generate-btn" onclick="generateDocument()">Generate Document</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = null;
+    let cart = [];
+    let products = [];
+
+    // ----- Load products; if email is present, fetch with previews -----
+    window.addEventListener('DOMContentLoaded', () => {
+      const emailInput = document.getElementById('customerEmail');
+      emailInput.addEventListener('input', debounce(loadProducts, 300));
+      loadProducts();
+      updateCartDisplay();
+    });
+
+    function debounce(fn, ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; }
+
+    async function loadProducts() {
+      try {
+        const email = encodeURIComponent(document.getElementById('customerEmail').value || '');
+        const url = email ? `/api/products?customerEmail=${email}` : '/api/products';
+        const r = await fetch(url);
+        products = await r.json();
+      } catch (e) {
+        console.warn('Falling back to empty product list', e);
+        products = [];
+      }
+      displayProducts();
+    }
+
+    // ----- UI: product grid -----
+    function displayProducts() {
+      const grid = document.getElementById('productGrid');
+      grid.innerHTML = products.map(p => `
+        <div class="product-card">
+          <div class="product-image">
+            ${p.previewImageUrl
+              ? `<img src="${p.previewImageUrl}" alt="${p.name}" onerror="this.remove();this.parentNode.textContent='No preview';"/>`
+              : 'Add customer email to preview mockup'}
+          </div>
+          <div class="product-name">${p.name}</div>
+          <div class="product-sku">SKU: ${p.sku}</div>
+          <div class="product-description">${p.description}</div>
+
+          <div class="pricing-table">
+            ${p.pricingTable ? p.pricingTable.map(t => `
+              <div class="pricing-tier" data-range="${t.quantity_range}">
+                <span>${t.quantity_range} units</span>
+                <span>${t.price_per_unit}</span>
+              </div>`).join('') : ''}
+          </div>
+
+          <div class="quantity-selector">
+            <button class="qty-btn" onclick="updateQuantity('${p.id}', -1)">-</button>
+            <input class="qty-input" id="qty-${p.id}" type="number" value="1" min="1" onchange="calculateProductPrice('${p.id}')"/>
+            <button class="qty-btn" onclick="updateQuantity('${p.id}', 1)">+</button>
+          </div>
+
+          <div class="price-display" id="price-${p.id}">$${(p.currentPrice ?? 0).toFixed(2)}</div>
+          <div id="savings-${p.id}"></div>
+          <button class="add-to-cart-btn" onclick="addToCart('${p.id}')">Add to Cart</button>
+        </div>
+      `).join('');
+
+      products.forEach(p => calculateProductPrice(p.id));
+    }
+
+    function updateQuantity(productId, delta) {
+      const input = document.getElementById(`qty-${productId}`);
+      input.value = Math.max(1, parseInt(input.value || '1', 10) + delta);
+      calculateProductPrice(productId);
+    }
+
+    // ----- Tier price for a product card -----
+    async function calculateProductPrice(productId) {
+      const quantity = parseInt(document.getElementById(`qty-${productId}`).value || '1', 10);
+      try {
+        const res = await fetch('/api/calculate-price', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId, quantity })
+        });
+        const data = await res.json();
+
+        document.getElementById(`price-${productId}`).innerHTML =
+          `$${data.totalPrice.toFixed(2)} ($${data.unitPrice.toFixed(2)} each)`;
+
+        const savingsEl = document.getElementById(`savings-${productId}`);
+        if (Number(data.savings) > 0) {
+          savingsEl.innerHTML = `<span class="savings-badge">Save $${Number(data.savings).toFixed(2)}!</span>`;
+        } else {
+          savingsEl.innerHTML = '';
+        }
+
+        const card = document.querySelector(`#qty-${productId}`).closest('.product-card');
+        card.querySelectorAll('.pricing-tier').forEach(tier => {
+          tier.classList.remove('active');
+          const range = tier.dataset.range;
+          if (data.pricingTier &&
+              (range === `${data.pricingTier.minQty}-${data.pricingTier.maxQty}` ||
+               range === `${data.pricingTier.minQty}+`)) {
+            tier.classList.add('active');
+          }
+        });
+      } catch (e) {
+        console.error('Price calc error', e);
+      }
+    }
+
+    // ----- Cart helpers using server tier pricing -----
+    async function getTierPrice(productId, quantity) {
+      const res = await fetch('/api/calculate-price', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, quantity })
+      });
+      if (!res.ok) throw new Error('Failed to fetch tier price');
+      return res.json(); // { unitPrice, totalPrice, pricingTier, ... }
+    }
+
+    async function addToCart(productId) {
+      const product = products.find(p => p.id === productId);
+      const qtyToAdd = Math.max(1, parseInt(document.getElementById(`qty-${productId}`).value || '1', 10));
+
+      // Merge with any existing row and reprice for new total qty
+      const existing = cart.find(i => i.productId === productId);
+      const newQty = (existing?.quantity || 0) + qtyToAdd;
+
+      try {
+        const { unitPrice } = await getTierPrice(productId, newQty);
+
+        if (existing) {
+          existing.quantity = newQty;
+          existing.unitPrice = unitPrice; // keep cart in sync with tiered unit price
+        } else {
+          cart.push({ productId, product, quantity: newQty, unitPrice });
+        }
+
+        updateCartDisplay();
+
+        // reset card qty and refresh its per-card pricing
+        document.getElementById(`qty-${productId}`).value = 1;
+        await calculateProductPrice(productId);
+      } catch (e) {
+        console.error('Failed to add to cart with tier price', e);
+      }
+    }
+
+    function removeFromCart(productId) {
+      cart = cart.filter(i => i.productId !== productId);
+      updateCartDisplay();
+    }
+
+    function updateCartDisplay() {
+      const cartEl = document.getElementById('cartItems');
+
+      if (cart.length === 0) {
+        cartEl.innerHTML = '<div class="cart-item" style="justify-content:center;color:#777;">Your cart is empty</div>';
+        return;
+      }
+
+      let subtotal = 0;
+      const rows = cart.map(item => {
+        const unit = Number(item.unitPrice ?? item.product?.currentPrice ?? 0);
+        const lineTotal = unit * item.quantity;
+        subtotal += lineTotal;
+
+        return `
+          <div class="cart-item">
+            <div>
+              <div class="cart-item-name">${item.product.name}</div>
+              <div class="cart-item-details">
+                Qty: ${item.quantity} × $${unit.toFixed(2)} = $${lineTotal.toFixed(2)}
+              </div>
+            </div>
+            <button class="remove-btn" onclick="removeFromCart('${item.productId}')">Remove</button>
+          </div>
+        `;
+      }).join('');
+
+      const tax = subtotal * 0.08;
+      const total = subtotal + tax;
+
+      cartEl.innerHTML = `
+        ${rows}
+        <div class="cart-totals">
+          <div class="total-row"><span>Subtotal:</span><span>$${subtotal.toFixed(2)}</span></div>
+          <div class="total-row"><span>Tax (8%):</span><span>$${tax.toFixed(2)}</span></div>
+          <div class="total-row grand-total"><span>Total:</span><span>$${total.toFixed(2)}</span></div>
+        </div>
+      `;
+    }
+
+    // ----- Mode switch & document creation -----
+    function setMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('documentType').textContent = mode === 'quote' ? 'Quote' : 'Invoice';
+
+      const shipping = document.getElementById('shippingSection');
+      if (mode === 'invoice') shipping.classList.add('active'); else shipping.classList.remove('active');
+
+      document.getElementById('generateBtn').textContent = `Generate ${mode === 'quote' ? 'Quote' : 'Invoice'}`;
+    }
+
+    async function generateDocument() {
+      if (!currentMode) return showError('Please select Quote or Invoice mode');
+      if (cart.length === 0) return showError('Please add products to cart');
+
+      const customerInfo = {
+        name: document.getElementById('customerName').value.trim(),
+        company: document.getElementById('customerCompany').value.trim(),
+        email: document.getElementById('customerEmail').value.trim(),
+        phone: document.getElementById('customerPhone').value.trim()
+      };
+      if (!customerInfo.name || !customerInfo.email) return showError('Please fill in required customer information');
+
+      let shippingAddress = null;
+      if (currentMode === 'invoice') {
+        shippingAddress = {
+          street: document.getElementById('shippingStreet').value.trim(),
+          city: document.getElementById('shippingCity').value.trim(),
+          state: document.getElementById('shippingState').value.trim(),
+          zip: document.getElementById('shippingZip').value.trim()
+        };
+        if (!shippingAddress.street || !shippingAddress.city || !shippingAddress.state || !shippingAddress.zip)
+          return showError('Please fill in all shipping address fields');
+      }
+
+      const requestData = {
+        products: cart.map(i => ({ productId: i.productId, quantity: i.quantity })),
+        customerInfo,
+        ...(shippingAddress ? { shippingAddress } : {})
+      };
+
+      try {
+        const endpoint = currentMode === 'quote' ? '/api/create-quote' : '/api/create-invoice';
+        const r = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestData)
+        });
+        const data = await r.json();
+        if (data.success) {
+          showSuccess(`${currentMode === 'quote' ? 'Quote' : 'Invoice'} created!`);
+          cart = []; updateCartDisplay();
+          if (data.viewUrl) window.open(data.viewUrl, '_blank');
+        } else {
+          showError(data.error || 'Failed to create document');
+        }
+      } catch (e) {
+        showError('Error creating document: ' + e.message);
+      }
+    }
+
+    // ----- Toasts -----
+    function showSuccess(msg) { const el = document.getElementById('successMessage'); el.textContent = msg; el.style.display = 'block'; setTimeout(()=> el.style.display='none', 5000); }
+    function showError(msg) { const el = document.getElementById('errorMessage'); el.textContent = msg; el.style.display = 'block'; setTimeout(()=> el.style.display='none', 6000); }
+  </script>
+</body>
+</html>
